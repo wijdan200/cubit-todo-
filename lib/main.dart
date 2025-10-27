@@ -1,16 +1,40 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:my_flutter_bloc_app/controller/task_cubit.dart';
-import 'package:my_flutter_bloc_app/models/task_model.dart';
-import 'cubit/counter_cubit.dart';
-
-void main() {
+import 'package:my_flutter_bloc_app/app_bloc_observer.dart';
+import 'bloc/task_bloc.dart';
+import 'bloc/counterb.dart';
+import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:path_provider/path_provider.dart';
+import 'pages/task_page.dart';
+// import 'cubit/counter_cubit.dart';
+// void main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+//   HydratedBloc.storage = await HydratedStorage.build(
+//     storageDirectory: kIsWeb
+//         ? HydratedStorageDirectory.web
+//         : HydratedStorageDirectory((await getTemporaryDirectory()).path),
+//   );
+Future<void> main() async {
+   Bloc.observer = AppBlocObserver();
+    WidgetsFlutterBinding.ensureInitialized();
+  HydratedBloc.storage = await HydratedStorage.build(
+    storageDirectory: kIsWeb ? HydratedStorageDirectory.web : HydratedStorageDirectory((await getTemporaryDirectory()).path),
+  );  
+ 
   runApp(
     MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: BlocProvider(
-        create: (_) => TaskCubit(),
-        child: TaskPage(title: 'To Do with Cubit'),
+      home: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (_) => TaskBloc(),
+          ),
+          BlocProvider(
+            create: (_) => CounterBloc(),
+          ),
+        ],
+        child: TaskPage(title: 'To Do with Bloc'),
       ),
     ),
   );
@@ -18,72 +42,4 @@ void main() {
 
 
 
-class TaskPage extends StatelessWidget {
-  TaskPage({super.key, required this.title});
-  final String title ;
-  final TextEditingController _taskController = TextEditingController();
 
-  @override
-  Widget build(BuildContext context) {
-    
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('TO DO with Cubit'),
-      ),
-      
-      body: BlocBuilder<TaskCubit, TaskState>(
-        builder: (context, state) {
-          return Column(
-          children: [
-            TextField(
-              controller: _taskController,
-              decoration: const InputDecoration(
-                labelText: 'Enter task',
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final task = TaskModel(
-                  id: DateTime.now().millisecondsSinceEpoch,
-                  title: _taskController.text,
-                  isDone: false,
-                );
-                context.read<TaskCubit>().addTask(task);
-                _taskController.clear();
-              },
-              child: const Text('Add Task'),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: state.tasksList.length,
-                itemBuilder: (context, index) {
-                  final task = state.tasksList[index];
-                  return ListTile(
-                    title: Text(task.title),
-                    leading: Checkbox(
-                      value: task.isDone,
-                      onChanged: (_) {
-                        context.read<TaskCubit>().toggleTask(task.id);
-                      },
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () {
-                        context.read<TaskCubit>().removeTask(task.id);
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-
-
-
-          ],
-
-          );
-        },
-      ),
-    );
-  }
-}
